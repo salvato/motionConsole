@@ -6,11 +6,15 @@
 #include <QTimer>
 
 
+QT_FORWARD_DECLARE_CLASS(QFile)
+
+
 class motionThread : public QObject
 {
     Q_OBJECT
 public:
     explicit motionThread(QObject *parent = nullptr);
+    ~motionThread();
 
 signals:
 
@@ -20,6 +24,14 @@ private slots:
     void onTimeToRestartSending();
 
 private:
+    bool prepareLogFile();
+    void logMessage(QString sMessage);
+
+private:
+    QFile* pLogFile;
+    QString sLogFileName;
+    QString sLogDir;
+    QString sMessage;
     QString sEmail, sSubject, sBody;
     QString sVideoDir;
     QStringList sFilters;

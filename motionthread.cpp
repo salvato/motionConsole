@@ -1,7 +1,12 @@
 #include "motionthread.h"
+#include <QDateTime>
+#include <QFile>
+#include <QStandardPaths>
+
 
 #define SENDING_DELAY   300000
 #define RESENDING_DELAY 600000
+
 
 motionThread::motionThread(QObject *parent)
     : QObject{parent}
@@ -16,6 +21,13 @@ motionThread::motionThread(QObject *parent)
                << "*.jpeg" << "*.JPEG")
     , isTooEarly(false)
 {
+    // Prepare message logging
+    sLogFileName = QString("motionConsoleLog.txt");
+    sLogDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+    if(!sLogDir.endsWith(QString("/"))) sLogDir+= QString("/");
+    sLogFileName = sLogDir+sLogFileName;
+    prepareLogFile();
+
     videoDir.setPath(sVideoDir);
     videoDir.setNameFilters(sFilters);
     videoDir.setFilter(QDir::Files);
@@ -36,8 +48,66 @@ motionThread::motionThread(QObject *parent)
             this, SLOT(onTimeToRestartSending()));
 
     watcher.addPath(sVideoDir);
-    qDebug() << QTime::currentTime().toString()
-             << "Program Started:";
+    sMessage = QTime::currentTime().toString() + " Program Started...";
+    qDebug() << sMessage;
+    logMessage(sMessage);
+}
+
+
+motionThread::~motionThread() {
+    if(pLogFile) {
+        if(pLogFile->isOpen()) {
+            pLogFile->flush();
+        }
+        pLogFile->deleteLater();
+        pLogFile = nullptr;
+    }
+}
+
+
+bool
+motionThread::prepareLogFile() {
+    // Rotate 5 previous logs, removing the oldest, to avoid data loss
+    QFileInfo checkFile(sLogFileName);
+    if(checkFile.exists() && checkFile.isFile()) {
+        QDir renamed;
+        renamed.remove(sLogFileName+QString("_4.txt"));
+        for(int i=4; i>0; i--) {
+            renamed.rename(sLogFileName+QString("_%1.txt").arg(i-1),
+                           sLogFileName+QString("_%1.txt").arg(i));
+        }
+        renamed.rename(sLogFileName,
+                       sLogFileName+QString("_0.txt"));
+    }
+    // Open the new log file
+    pLogFile = new QFile(sLogFileName);
+    if (!pLogFile->open(QIODevice::WriteOnly)) {
+        qDebug() <<  QString("Unable to open file %1: %2.")
+                     .arg(sLogFileName, pLogFile->errorString());
+        delete pLogFile;
+        pLogFile = Q_NULLPTR;
+    }
+    return true;
+}
+
+
+void
+motionThread::logMessage(QString sMessage) {
+    QDateTime dateTime;
+    QString sDebugMessage = dateTime.currentDateTime().toString() +
+            QString(" - ") +
+            sMessage;
+    if(pLogFile) {
+        if(pLogFile->isOpen()) {
+            pLogFile->write(sDebugMessage.toUtf8().data());
+            pLogFile->write("\n");
+            pLogFile->flush();
+        }
+        else
+            qDebug() << sDebugMessage;
+    }
+    else
+        qDebug() << sDebugMessage;
 }
 
 
@@ -53,9 +123,9 @@ motionThread::onNewFileCreated(QString sPath) {
                      << sFileToSend;
             if(!isTooEarly) {
                 isTooEarly = true;
-                qDebug() << "Will Send an email in "
-                         << SENDING_DELAY/1000
-                         << "sec";
+                QString sMessage = QString("Will Send an email in %1 sec")
+                                   .arg(SENDING_DELAY/1000);
+                logMessage(sMessage);
                 sendingTimer.start(SENDING_DELAY);
             }
         }
@@ -69,18 +139,18 @@ motionThread::onTimeToSend() {
     sendingTimer.stop();
     sCommand = QString("echo \"%1\" | mutt -a \"%2\" -s \"%3\" -- %4")
                    .arg(sBody, sFileToSend, sSubject, sEmail);
-    qDebug() << "Time Elapsed: Sending Motion Image";
-    qDebug() << sCommand;
+    sMessage = QString("Time Elapsed: Sending Motion Image\n") + sCommand;
+    logMessage(sMessage);
     int iError = system(sCommand.toLocal8Bit());
     if(iError) {
-        qDebug() << "Error sending email:" << errno;
+        sMessage = QString("Error sending email: %1").arg(errno);
     }
     else {
-        qDebug() << "Motion Image Sent";
+        sMessage = QString("Motion Image Sent");
     }
-    qDebug() << "Avoid Sending emails for "
-             << RESENDING_DELAY/1000
-             << "sec";
+    logMessage(sMessage);
+    sMessage = QString("Avoid Sending emails for %1 sec")
+               .arg(RESENDING_DELAY/1000);
     restingTimer.start(RESENDING_DELAY);
 }
 
