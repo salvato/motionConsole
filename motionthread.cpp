@@ -2,6 +2,7 @@
 #include <QDateTime>
 #include <QFile>
 #include <QStandardPaths>
+#include <QDebug>
 
 
 #define SENDING_DELAY   300000
@@ -16,9 +17,9 @@ motionThread::motionThread(QObject *parent)
     , sVideoDir(QString("/var/lib/motion"))
 //    , sVideoDir(QString("/home/rov"))
     , sFilters(QStringList()
-               << "*.jpg"  << "*.JPG"
-               //<< "*.mkv"  << "*.MKV"
-               << "*.jpeg" << "*.JPEG")
+               //<< "*.jpg"  << "*.JPG"
+               //<< "*.jpeg" << "*.JPEG"
+               << "*.mkv"  << "*.MKV")
     , isTooEarly(false)
 {
     // Prepare message logging
