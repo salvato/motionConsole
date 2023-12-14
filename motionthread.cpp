@@ -121,13 +121,13 @@ motionThread::onNewFileCreated(QString sPath) {
     newFilesPresent = videoDir.entryList();
     for(int i=0; i<newFilesPresent.count(); i++) {
         if(!oldFilesPresent.contains(newFilesPresent.at(i))) {
-            sFileToSend = sPath + "/" + newFilesPresent.at(i);
             sMessage = QTime::currentTime().toString() +
                         QString("New File Created: %1")
-                        .arg(sFileToSend);
+                        .arg(newFilesPresent.at(i));
             logMessage(sMessage);
             if(!isTooEarly) {
                 isTooEarly = true;
+                sFileToSend = sPath + "/" + newFilesPresent.at(i);
                 sMessage = QString("Will Send an email in %1 sec")
                                    .arg(SENDING_DELAY/1000);
                 logMessage(sMessage);
