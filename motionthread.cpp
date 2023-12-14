@@ -27,7 +27,9 @@ motionThread::motionThread(QObject *parent)
     sLogDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
     if(!sLogDir.endsWith(QString("/"))) sLogDir+= QString("/");
     sLogFileName = sLogDir+sLogFileName;
-    prepareLogFile();
+    if(!prepareLogFile()) {
+        exit(EXIT_FAILURE);
+    }
 
     videoDir.setPath(sVideoDir);
     videoDir.setNameFilters(sFilters);
@@ -87,6 +89,7 @@ motionThread::prepareLogFile() {
                      .arg(sLogFileName, pLogFile->errorString());
         delete pLogFile;
         pLogFile = Q_NULLPTR;
+        return false;
     }
     return true;
 }
@@ -119,12 +122,13 @@ motionThread::onNewFileCreated(QString sPath) {
     for(int i=0; i<newFilesPresent.count(); i++) {
         if(!oldFilesPresent.contains(newFilesPresent.at(i))) {
             sFileToSend = sPath + "/" + newFilesPresent.at(i);
-            qDebug() << QTime::currentTime().toString()
-                     << "New File Created:"
-                     << sFileToSend;
+            sMessage = QTime::currentTime().toString() +
+                        QString("New File Created: %1")
+                        .arg(sFileToSend);
+            logMessage(sMessage);
             if(!isTooEarly) {
                 isTooEarly = true;
-                QString sMessage = QString("Will Send an email in %1 sec")
+                sMessage = QString("Will Send an email in %1 sec")
                                    .arg(SENDING_DELAY/1000);
                 logMessage(sMessage);
                 sendingTimer.start(SENDING_DELAY);
@@ -152,6 +156,7 @@ motionThread::onTimeToSend() {
     logMessage(sMessage);
     sMessage = QString("Avoid Sending emails for %1 sec")
                .arg(RESENDING_DELAY/1000);
+    logMessage(sMessage);
     restingTimer.start(RESENDING_DELAY);
 }
 
