@@ -127,7 +127,7 @@ motionThread::onNewFileCreated(QString sPath) {
             logMessage(sMessage);
             if(!isTooEarly) {
                 isTooEarly = true;
-                sCommand = QString("echo -e \"Motion detected: movie will follow\" | msmtp -a gmail %1")
+                sCommand = QString("echo -e \"\nMotion detected: \nMovie will follow\" | msmtp -a gmail %1")
                                .arg(sEmail);
                 sMessage = QString("Time Elapsed: Sending Initial Message\n") + sCommand;
                 logMessage(sMessage);
