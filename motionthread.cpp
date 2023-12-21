@@ -5,7 +5,7 @@
 #include <QDebug>
 
 
-#define SENDING_DELAY   300000
+#define SENDING_DELAY   180000
 #define RESENDING_DELAY 600000
 
 
@@ -122,14 +122,27 @@ motionThread::onNewFileCreated(QString sPath) {
     for(int i=0; i<newFilesPresent.count(); i++) {
         if(!oldFilesPresent.contains(newFilesPresent.at(i))) {
             sMessage = QTime::currentTime().toString() +
-                        QString("New File Created: %1")
+                       QString(" New File Created: %1")
                         .arg(newFilesPresent.at(i));
             logMessage(sMessage);
             if(!isTooEarly) {
                 isTooEarly = true;
+                sCommand = QString("echo -e \"Motion detected: movie will follow\" | msmtp -a gmail %1")
+                               .arg(sEmail);
+                sMessage = QString("Time Elapsed: Sending Initial Message\n") + sCommand;
+                logMessage(sMessage);
+                int iError = system(sCommand.toLocal8Bit());
+                if(iError) {
+                    sMessage = QString("Error sending initial message: %1").arg(errno);
+                }
+                else {
+                    sMessage = QString("Initial Message Sent");
+                }
+                logMessage(sMessage);
                 sFileToSend = sPath + "/" + newFilesPresent.at(i);
-                sMessage = QString("Will Send an email in %1 sec")
-                                   .arg(SENDING_DELAY/1000);
+                sMessage = QTime::currentTime().toString() +
+                           QString(" Will Send an email in %1 sec")
+                            .arg(SENDING_DELAY/1000);
                 logMessage(sMessage);
                 sendingTimer.start(SENDING_DELAY);
             }
